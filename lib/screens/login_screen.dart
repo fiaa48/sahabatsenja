@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sahabatsenja_app/screens/perawat/home_perawat_screen.dart';
 import 'main_app.dart';
 import 'register_screen.dart';
 
@@ -14,6 +16,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -24,11 +27,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final Color mainColor = const Color(0xFF9C6223);
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // 🔹 Login Email & Password
+  // ✅ LOGIN DENGAN EMAIL & PASSWORD
   Future<void> _handleEmailLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     try {
@@ -37,20 +38,51 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
 
-      if (userCredential.user != null) {
-        if (!mounted) return;
+      final user = userCredential.user;
+      if (user == null) {
+        _showSnack('Gagal login, user tidak ditemukan.');
+        return;
+      }
+
+      print('🔍 Cek Firestore apakah user perawat...');
+      final query = await _firestore
+          .collection('users')
+          .where('uid', isEqualTo: user.uid)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        final data = query.docs.first.data();
+        final role = (data['role'] ?? '').toString().toLowerCase();
+
+        print('🧾 Ditemukan user di Firestore: $data');
+        if (role == 'perawat') {
+          print('✅ Role PERAWAT ditemukan → ke HomePerawatScreen');
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => HomePerawatScreen()),
+            );
+            return;
+          }
+        }
+      }
+
+      // Default ke keluarga kalau tidak ditemukan di Firestore
+      print('⚠️ Tidak ada data di Firestore → ke MainApp (keluarga)');
+      if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainApp()),
+          MaterialPageRoute(builder: (_) => const MainApp()),
         );
       }
+
     } on FirebaseAuthException catch (e) {
       String msg = 'Terjadi kesalahan saat login';
       if (e.code == 'user-not-found') msg = 'Email tidak ditemukan';
       if (e.code == 'wrong-password') msg = 'Kata sandi salah';
       if (e.code == 'invalid-email') msg = 'Format email tidak valid';
       if (e.code == 'user-disabled') msg = 'Akun ini dinonaktifkan';
-      if (e.code == 'too-many-requests') msg = 'Terlalu banyak percobaan. Coba lagi nanti';
       _showSnack(msg);
     } catch (e) {
       _showSnack('Gagal login: $e');
@@ -59,34 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 🔹 Lupa Password
-  Future<void> _handleForgotPassword() async {
-    if (_emailController.text.isEmpty) {
-      _showSnack('Masukkan email untuk reset kata sandi');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      await _auth.sendPasswordResetEmail(email: _emailController.text.trim());
-      if (!mounted) return;
-      _showDialog(
-        'Email Reset Terkirim',
-        'Kami telah mengirim link reset kata sandi ke ${_emailController.text.trim()}.\nSilakan cek email Anda (termasuk folder spam).',
-      );
-    } on FirebaseAuthException catch (e) {
-      String msg = 'Gagal mengirim email reset';
-      if (e.code == 'user-not-found') msg = 'Email tidak terdaftar';
-      if (e.code == 'invalid-email') msg = 'Format email tidak valid';
-      _showSnack(msg);
-    } catch (e) {
-      _showSnack('Gagal mengirim email reset: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  // 🔹 Login dengan Google
+  // ✅ LOGIN DENGAN GOOGLE
   Future<void> _handleGoogleLogin() async {
     setState(() => _isLoading = true);
     try {
@@ -104,45 +109,20 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
-      
       if (userCredential.user != null && mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainApp()),
+          MaterialPageRoute(builder: (_) => const MainApp()),
         );
       }
     } catch (e) {
       _showSnack('Gagal login dengan Google: $e');
+    } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message), 
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  void _showDialog(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: const Text('OK')
-          ),
-        ],
-      ),
-    );
-  }
-
+  // ✅ RESET PASSWORD
   void _showForgotPasswordDialog() {
     showDialog(
       context: context,
@@ -159,33 +139,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 hintText: 'Masukkan Email',
                 border: OutlineInputBorder(),
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Email harus diisi';
-                }
-                if (!value.contains('@')) {
-                  return 'Format email tidak valid';
-                }
-                return null;
-              },
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: const Text('Batal')
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: mainColor),
-            onPressed: () {
-              if (_emailController.text.isNotEmpty && _emailController.text.contains('@')) {
-                Navigator.pop(context);
-                _handleForgotPassword();
-              } else {
-                _showSnack('Masukkan email yang valid');
-              }
-            },
+            onPressed: _handleForgotPassword,
             child: const Text('Kirim Link Reset'),
           ),
         ],
@@ -193,32 +154,58 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _handleForgotPassword() async {
+    if (_emailController.text.isEmpty) {
+      _showSnack('Masukkan email untuk reset kata sandi');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _auth.sendPasswordResetEmail(email: _emailController.text.trim());
+      _showDialog(
+        'Email Reset Terkirim',
+        'Kami telah mengirim link reset kata sandi ke ${_emailController.text.trim()}. Silakan cek email Anda.',
+      );
+    } catch (e) {
+      _showSnack('Gagal mengirim email reset: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // ✅ Navigasi ke Register
   void _navigateToRegister() {
-    Navigator.push(
-      context, 
-      MaterialPageRoute(builder: (_) => const RegisterScreen())
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen()));
+  }
+
+  // ✅ Utilitas UI
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
-  // Validator untuk email
+  void _showDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+      ),
+    );
+  }
+
   String? _emailValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email harus diisi';
-    }
-    if (!value.contains('@') || !value.contains('.')) {
-      return 'Format email tidak valid';
-    }
+    if (value == null || value.isEmpty) return 'Email harus diisi';
+    if (!value.contains('@') || !value.contains('.')) return 'Format email tidak valid';
     return null;
   }
 
-  // Validator untuk password
   String? _passwordValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Kata sandi harus diisi';
-    }
-    if (value.length < 6) {
-      return 'Kata sandi minimal 6 karakter';
-    }
+    if (value == null || value.isEmpty) return 'Kata sandi harus diisi';
+    if (value.length < 6) return 'Kata sandi minimal 6 karakter';
     return null;
   }
 
@@ -230,11 +217,10 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // 🔹 HEADER GAMBAR FULL WIDTH
               ClipPath(
                 clipper: BottomCurveClipper(),
                 child: Container(
-                  width: MediaQuery.of(context).size.width,
+                  width: double.infinity,
                   height: 260,
                   decoration: const BoxDecoration(
                     image: DecorationImage(
@@ -263,7 +249,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
-                            letterSpacing: 1.2,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -278,17 +263,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: mainColor,
                             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                           child: const Text(
                             'PENDAFTARAN',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -298,22 +277,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               const SizedBox(height: 30),
-
-              // 🔹 LOGO & NAMA APLIKASI
-              Column(
-                children: [
-                  Image.asset('assets/images/logo_login.png', width: 130, height: 130),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Sahabat Senja',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
+              Image.asset('assets/images/logo_login.png', width: 130, height: 130),
+              const SizedBox(height: 12),
+              const Text('Sahabat Senja', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
 
               const SizedBox(height: 35),
 
@@ -331,13 +297,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         alignment: Alignment.centerRight,
                         child: GestureDetector(
                           onTap: _showForgotPasswordDialog,
-                          child: Text(
-                            'Lupa Kata Sandi?', 
-                            style: TextStyle(
-                              color: mainColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          child: Text('Lupa Kata Sandi?', style: TextStyle(color: mainColor)),
                         ),
                       ),
                       const SizedBox(height: 30),
@@ -349,32 +309,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: mainColor,
                                   padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
-                                onPressed: _isLoading ? null : _handleEmailLogin,
-                                child: const Text(
-                                  'Masuk',
-                                  style: TextStyle(
-                                      fontSize: 16, fontWeight: FontWeight.w600),
-                                ),
+                                onPressed: _handleEmailLogin,
+                                child: const Text('Masuk', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                               ),
                             ),
                       const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('Belum punya akun?',
-                              style: TextStyle(color: Colors.grey)),
+                          const Text('Belum punya akun?', style: TextStyle(color: Colors.grey)),
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: _navigateToRegister,
-                            child: Text('Daftar di sini',
-                                style: TextStyle(
-                                  color: mainColor,
-                                  fontWeight: FontWeight.w500,
-                                )),
+                            child: Text('Daftar di sini', style: TextStyle(color: mainColor, fontWeight: FontWeight.w500)),
                           ),
                         ],
                       ),
@@ -382,10 +331,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         children: [
                           Expanded(child: Divider(color: Colors.grey[300])),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('atau'),
-                          ),
+                          const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('atau')),
                           Expanded(child: Divider(color: Colors.grey[300])),
                         ],
                       ),
@@ -395,16 +341,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           backgroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           side: BorderSide(color: Colors.grey[300]!),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        onPressed: _isLoading ? null : _handleGoogleLogin,
+                        onPressed: _handleGoogleLogin,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Image.asset('assets/images/google.png',
-                                width: 24, height: 24),
+                            Image.asset('assets/images/google.png', width: 24, height: 24),
                             const SizedBox(width: 12),
                             const Text('Masuk dengan Google'),
                           ],
@@ -422,12 +365,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTextField(
-    String label, 
-    TextEditingController controller, 
-    bool isPassword, 
-    String? Function(String?)? validator
-  ) {
+  Widget _buildTextField(String label, TextEditingController controller, bool isPassword,
+      String? Function(String?)? validator) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -441,10 +380,8 @@ class _LoginScreenState extends State<LoginScreen> {
             hintText: 'Masukkan $label',
             suffixIcon: isPassword
                 ? IconButton(
-                    icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   )
                 : null,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -464,18 +401,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// 🔹 CLIPPER UNTUK LENGKUNG BAWAH
 class BottomCurveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
     path.lineTo(0, size.height - 40);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height,
-      size.width,
-      size.height - 40,
-    );
+    path.quadraticBezierTo(size.width / 2, size.height, size.width, size.height - 40);
     path.lineTo(size.width, 0);
     path.close();
     return path;

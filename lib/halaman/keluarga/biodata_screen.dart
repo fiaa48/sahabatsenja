@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sahabatsenja_app/models/datalansia_model.dart';
-import 'package:sahabatsenja_app/halaman/services/biodata_service.dart';
+import '../services/datalansia_service.dart'; // ✅ pakai service yang benar
 
 class BiodataLansiaScreen extends StatefulWidget {
   const BiodataLansiaScreen({super.key});
@@ -10,7 +10,6 @@ class BiodataLansiaScreen extends StatefulWidget {
 }
 
 class _BiodataLansiaScreenState extends State<BiodataLansiaScreen> {
-  final BiodataService _biodataService = BiodataService();
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _namaController = TextEditingController();
@@ -165,12 +164,13 @@ class _BiodataLansiaScreenState extends State<BiodataLansiaScreen> {
     }
   }
 
-  void _submitForm() async {
+  Future<void> _submitForm() async {
     if (_formKey.currentState!.validate() && _selectedDate != null) {
       try {
-        final data = Datalansia(
+        final datalansia = Datalansia(
           namaLansia: _namaController.text,
-          tanggalLahirLansia: (_selectedDate ?? DateTime.now()).toIso8601String(),
+          tanggalLahirLansia:
+              "${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}",
           tempatLahirLansia: _tempatLahirController.text,
           umurLansia: int.tryParse(_umurController.text),
           jenisKelaminLansia: _jenisKelamin,
@@ -185,19 +185,13 @@ class _BiodataLansiaScreenState extends State<BiodataLansiaScreen> {
           emailAnak: _emailController.text,
         );
 
-        final success = await _biodataService.createDataLansia(data);
+        final created = await DatalansiaService.createDatalansia(datalansia);
 
-        if (success) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('✅ Biodata lansia berhasil disimpan!')),
-            );
-            Navigator.pop(context, true);
-          }
-        } else {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('❌ Gagal menyimpan biodata.')),
+            SnackBar(content: Text('✅ Biodata ${created.namaLansia} berhasil disimpan!')),
           );
+          Navigator.pop(context, true);
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -210,5 +204,4 @@ class _BiodataLansiaScreenState extends State<BiodataLansiaScreen> {
       );
     }
   }
-
 }

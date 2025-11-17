@@ -1,4 +1,3 @@
-// screens/keluarga/health_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sahabatsenja_app/models/datalansia_model.dart';
@@ -6,20 +5,19 @@ import 'package:sahabatsenja_app/models/kondisi_model.dart';
 import 'package:sahabatsenja_app/halaman/services/biodata_service.dart';
 import 'package:sahabatsenja_app/halaman/services/kondisi_service.dart';
 
-class HealthScreen extends StatefulWidget {
-  const HealthScreen({super.key});
+class KesehatanScreen extends StatefulWidget {
+  const KesehatanScreen({super.key});
 
   @override
-  State<HealthScreen> createState() => _HealthScreenState();
+  State<KesehatanScreen> createState() => _KesehatanScreenState();
 }
 
-class _HealthScreenState extends State<HealthScreen> {
+class _KesehatanScreenState extends State<KesehatanScreen> {
   final BiodataService _biodataService = BiodataService();
   final KondisiService _kondisiService = KondisiService();
 
   List<Datalansia> _lansiaTerhubung = [];
   bool _isLoading = true;
-  String? _currentUserName;
 
   @override
   void initState() {
@@ -27,15 +25,31 @@ class _HealthScreenState extends State<HealthScreen> {
     _loadUserData();
   }
 
+  /// 🔹 Ambil data keluarga yang login & lansia yang terhubung
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
 
-    final user = FirebaseAuth.instance.currentUser;
-    _currentUserName = user?.displayName;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final email = user?.email;
 
-    if (_currentUserName != null) {
-    _lansiaTerhubung =
-        await _biodataService.getBiodataByKeluarga(_currentUserName!);
+      if (email != null) {
+        // Ambil ID keluarga berdasarkan email login
+        final idKeluarga = await _biodataService.getIdKeluargaByEmail(email);
+
+        if (idKeluarga != null) {
+
+          // Ambil data lansia berdasarkan id keluarga
+          final dataLansia =
+              await _biodataService.getBiodataByKeluarga(idKeluarga);
+
+          setState(() {
+            _lansiaTerhubung = dataLansia;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error ambil data user/lansia: $e');
     }
 
     setState(() => _isLoading = false);
@@ -86,7 +100,7 @@ class _HealthScreenState extends State<HealthScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                'Tambahkan data lansia melalui menu "Tambah Lansia" di bawah',
+                'Tambahkan data lansia melalui menu "Tambah Lansia"',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.grey,
@@ -98,39 +112,39 @@ class _HealthScreenState extends State<HealthScreen> {
         ),
       );
 
-Widget _buildLansiaList() {
-  return ListView.builder(
-    itemCount: _lansiaTerhubung.length,
-    itemBuilder: (context, index) {
-      final lansia = _lansiaTerhubung[index];
+  Widget _buildLansiaList() {
+    return ListView.builder(
+      itemCount: _lansiaTerhubung.length,
+      itemBuilder: (context, index) {
+        final lansia = _lansiaTerhubung[index];
 
-      return FutureBuilder<KondisiHarian?>(
-        future: _kondisiService.getTodayData(lansia.namaLansia),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
+        return FutureBuilder<KondisiHarian?>(
+          future: _kondisiService.getTodayData(lansia.id as String),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-          if (snapshot.hasError) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Gagal memuat data kondisi: ${snapshot.error}',
-                style: const TextStyle(color: Colors.red),
-              ),
-            );
-          }
+            if (snapshot.hasError) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Gagal memuat kondisi: ${snapshot.error}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              );
+            }
 
-          final kondisi = snapshot.data;
-          return _buildLansiaCard(lansia, kondisi);
-        },
-      );
-    },
-  );
-}
+            final kondisi = snapshot.data;
+            return _buildLansiaCard(lansia, kondisi);
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildLansiaCard(Datalansia lansia, KondisiHarian? kondisi) {
     return Card(
@@ -141,7 +155,6 @@ Widget _buildLansiaList() {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header dengan nama dan status
             Row(
               children: [
                 CircleAvatar(
@@ -195,14 +208,8 @@ Widget _buildLansiaList() {
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
-
-            // Data kesehatan
-            if (kondisi != null)
-              _buildHealthData(kondisi)
-            else
-              _buildNoHealthData(),
+            kondisi != null ? _buildHealthData(kondisi) : _buildNoHealthData(),
           ],
         ),
       ),
@@ -236,7 +243,7 @@ Widget _buildLansiaList() {
             _buildMetricItem('💊', 'Status Obat', kondisi.statusObat),
           ],
         ),
-        if (kondisi != null && (kondisi.catatan?.isNotEmpty ?? false)) ...[
+        if (kondisi.catatan?.isNotEmpty ?? false) ...[
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
@@ -308,10 +315,7 @@ Widget _buildLansiaList() {
         children: [
           Text(icon, style: const TextStyle(fontSize: 20)),
           const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-          ),
+          Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
           Text(
             value,
             style: const TextStyle(

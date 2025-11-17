@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sahabatsenja_app/halaman/keluarga/biodata_screen.dart';
-import 'package:sahabatsenja_app/halaman/keluarga/health_screen.dart';
+import 'package:sahabatsenja_app/halaman/keluarga/kesehatan_screen.dart';
 import 'package:sahabatsenja_app/halaman/keluarga/transaction_screen.dart';
 import 'package:sahabatsenja_app/halaman/keluarga/donation_screen.dart';
 import 'package:sahabatsenja_app/halaman/keluarga/notification_screen.dart';
@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _navigateToHealth(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const HealthScreen()),
+      MaterialPageRoute(builder: (context) => const KesehatanScreen()),
     );
   }
 
@@ -59,13 +59,24 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F5),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildQuickMenu(context),
-            _buildRecentActivities(),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom,
+            ),
+            child: Column(
+              children: [
+                _buildHeader(),
+                _buildQuickMenu(context),
+                _buildRecentActivities(),
+                const SizedBox(height: 20), // Extra space at bottom
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -74,106 +85,143 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      height: 180, // Diperkecil lagi
+      height: 200, // Kurangi tinggi sedikit agar lebih proporsional
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF9C6223),
-            const Color(0xFF9C6223).withOpacity(0.8),
-          ],
-        ),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
         ),
+        image: const DecorationImage(
+          image: AssetImage('assets/images/home_gambar.jpeg'),
+          fit: BoxFit.cover,
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withOpacity(0.3),
+            Colors.black.withOpacity(0.6),
+          ],
+        ),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 25, 20, 25), // Kurangi padding bawah
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+          ),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withOpacity(0.4),
+              Colors.black.withOpacity(0.7),
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween, // Ubah dari end ke spaceBetween
+          children: [
+            // Spacer untuk mengatur jarak dari atas
+            const SizedBox(height: 8),
+            
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Halo, ${widget.namaKeluarga}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFFFFF9F5),
-                          fontWeight: FontWeight.w400,
+                      const Text(
+                        'Halo,',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w300,
                         ),
                       ),
                       const SizedBox(height: 4),
                       const Text(
                         'Sahabat Senja',
                         style: TextStyle(
-                          fontSize: 24,
-                          color: Color(0xFFFFF9F5),
+                          fontSize: 28,
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 8), // Kurangi spacing
+                      Text(
+                        widget.namaKeluarga,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Keluarga Lansia',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white60,
                         ),
                       ),
                     ],
                   ),
-                  Stack(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF9F5).withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.notifications_none,
-                              color: Color(0xFFFFF9F5), size: 24),
-                          onPressed: () => _navigateToNotifications(context),
-                        ),
+                ),
+                const SizedBox(width: 16),
+                Stack(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
                       ),
-                      if (_notificationCount > 0)
-                        Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
+                      child: IconButton(
+                        icon: const Icon(Icons.notifications_none,
+                            color: Colors.white, size: 26),
+                        onPressed: () => _navigateToNotifications(context),
+                      ),
+                    ),
+                    if (_notificationCount > 0)
+                      Positioned(
+                        right: 6,
+                        top: 6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 20,
+                            minHeight: 20,
+                          ),
+                          child: Text(
+                            _notificationCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
                             ),
-                            constraints: const BoxConstraints(
-                              minWidth: 18,
-                              minHeight: 18,
-                            ),
-                            child: Text(
-                              _notificationCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Pantau kondisi lansia Anda dengan mudah',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFFFFF9F5),
+                      ),
+                  ],
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+            
+            // Spacer kecil di bawah untuk balance
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
@@ -199,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.dashboard_outlined, color: Color(0xFF9C6223), size: 20),
+              Icon(Icons.dashboard_outlined, color: Color(0xFF9C6223), size: 22),
               SizedBox(width: 8),
               Text(
                 'Menu Keluarga',
@@ -212,72 +260,87 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildMenuButton(
-                'Kesehatan', 
-                Icons.medical_services_outlined, 
-                const Color(0xFF4CAF50), 
-                () => _navigateToHealth(context),
-                'Pantau kesehatan lansia'
-              ),
-              _buildMenuButton(
-                'Biodata Lansia', 
-                Icons.person_outline, 
-                const Color(0xFF2196F3), 
-                () => _navigateToBiodataLansia(context),
-                'Kelola data pribadi lansia'
-              ),
-              _buildMenuButton(
-                'Donasi', 
-                Icons.volunteer_activism_outlined, 
-                const Color(0xFFFF9800), 
-                () => _navigateToDonation(context),
-                'Berikan dukungan'
-              ),
-              _buildMenuButton(
-                'Transaksi', 
-                Icons.payment_outlined, 
-                const Color(0xFF9C27B0), 
-                () => _navigateToTransactions(context),
-                'Riwayat pembayaran'
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final buttonSize = constraints.maxWidth / 4 - 16;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildMenuButton(
+                    'Kesehatan', 
+                    Icons.medical_services_outlined, 
+                    const Color(0xFF4CAF50), 
+                    () => _navigateToHealth(context),
+                    'Pantau kesehatan lansia',
+                    buttonSize,
+                  ),
+                  _buildMenuButton(
+                    'Biodata Lansia', 
+                    Icons.person_outline, 
+                    const Color(0xFF2196F3), 
+                    () => _navigateToBiodataLansia(context),
+                    'Kelola data pribadi lansia',
+                    buttonSize,
+                  ),
+                  _buildMenuButton(
+                    'Donasi', 
+                    Icons.volunteer_activism_outlined, 
+                    const Color(0xFFFF9800), 
+                    () => _navigateToDonation(context),
+                    'Berikan dukungan',
+                    buttonSize,
+                  ),
+                  _buildMenuButton(
+                    'Transaksi', 
+                    Icons.payment_outlined, 
+                    const Color(0xFF9C27B0), 
+                    () => _navigateToTransactions(context),
+                    'Riwayat pembayaran',
+                    buttonSize,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMenuButton(String title, IconData icon, Color color, VoidCallback onTap, String description) {
+  Widget _buildMenuButton(String title, IconData icon, Color color, 
+      VoidCallback onTap, String description, double size) {
     return Tooltip(
       message: description,
       child: GestureDetector(
         onTap: onTap,
-        child: Column(
-          children: [
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-                border: Border.all(color: color.withOpacity(0.2), width: 2),
+        child: SizedBox(
+          width: size,
+          child: Column(
+            children: [
+              Container(
+                width: size * 0.7,
+                height: size * 0.7,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withOpacity(0.2), width: 2),
+                ),
+                child: Icon(icon, color: color, size: size * 0.35),
               ),
-              child: Icon(icon, color: color, size: 32),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF333333),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: size * 0.12,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF333333),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -330,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.history_outlined, color: Color(0xFF9C6223), size: 20),
+              Icon(Icons.history_outlined, color: Color(0xFF9C6223), size: 22),
               SizedBox(width: 8),
               Text(
                 'Aktivitas Terbaru',
@@ -366,6 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   color: Color(0xFF9C6223),
                   fontWeight: FontWeight.w500,
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -375,7 +439,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActivityItem(String title, String time, String status, Color color, IconData icon, String description) {
+  Widget _buildActivityItem(String title, String time, String status, 
+      Color color, IconData icon, String description) {
     return Tooltip(
       message: description,
       child: Container(
@@ -409,6 +474,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontSize: 14,
                       color: Color(0xFF333333),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(

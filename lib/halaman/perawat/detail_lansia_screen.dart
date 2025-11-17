@@ -188,7 +188,7 @@ class _DetailLansiaScreenState extends State<DetailLansiaScreen> {
         final kondisi = KondisiHarian(
           idLansia: widget.biodata.id!,
           tekananDarah: _tekananDarahController.text,
-          nadi: int.tryParse(_nadiController.text) ?? 0,
+          nadi: _nadiController.text,
           nafsuMakan: _nafsuMakan,
           statusObat: _statusObat,
           catatan: _catatanController.text,

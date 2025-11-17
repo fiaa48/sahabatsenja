@@ -4,7 +4,7 @@ import 'package:sahabatsenja_app/models/datalansia_model.dart';
 
 class BiodataService {
   // 🔗 Ganti baseUrl sesuai IP / domain server Laravel kamu
-  final String baseUrl = 'http://10.0.161.194:8000/api';
+  final String baseUrl = 'http://10.0.162.77:8000/api';
 
   /// 🧩 Simpan data lansia ke database Laravel
   Future<bool> createDataLansia(Datalansia data) async {
@@ -92,4 +92,6 @@ class BiodataService {
   void initializeDemoData() {}
 
   getAllBiodata() {}
+
+  getIdKeluargaByEmail(String email) {}
 }

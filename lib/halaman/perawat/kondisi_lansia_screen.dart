@@ -24,18 +24,18 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
   }
 
   Future<void> _loadKondisi() async {
-  setState(() => isLoading = true);
-  try {
-    final data = await _kondisiService.fetchAllKondisi(); // <-- pakai method baru
-    setState(() {
-      semuaKondisi = data;
-    });
-  } catch (e) {
-    print('⚠️ Error load kondisi: $e');
-  } finally {
-    setState(() => isLoading = false);
+    setState(() => isLoading = true);
+    try {
+      final data = await _kondisiService.fetchAllKondisi();
+      setState(() {
+        semuaKondisi = data;
+      });
+    } catch (e) {
+      print('⚠️ Error load kondisi: $e');
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
-}
 
   List<KondisiHarian> get filteredLansia {
     List<KondisiHarian> data = semuaKondisi;
@@ -50,7 +50,11 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
     }
 
     if (filterStatus != 'Semua') {
-      data = data.where((e) => e.status == filterStatus).toList();
+      if (filterStatus == 'Stabil') {
+        data = data.where((e) => e.normalizedStatus == 'Stabil').toList();
+      } else if (filterStatus == 'Perlu Perhatian') {
+        data = data.where((e) => e.normalizedStatus == 'Perlu Perhatian').toList();
+      }
     }
 
     return data;
@@ -70,7 +74,7 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Filter Section
+                // 🔸 Filter Section
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -111,7 +115,7 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
                   ),
                 ),
 
-                // Summary Cards
+                // 🔸 Summary Cards
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -120,13 +124,13 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
                       const SizedBox(width: 10),
                       _buildSummaryCard(
                           'Stabil',
-                          semuaKondisi.where((l) => l.status == 'Stabil').length,
+                          semuaKondisi.where((l) => l.normalizedStatus == 'Stabil').length,
                           Colors.green),
                       const SizedBox(width: 10),
                       _buildSummaryCard(
-                          'Perhatian',
+                          'Perlu Perhatian',
                           semuaKondisi
-                              .where((l) => l.status == 'Perlu Perhatian')
+                              .where((l) => l.normalizedStatus == 'Perlu Perhatian')
                               .length,
                           Colors.orange),
                     ],
@@ -134,7 +138,7 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Data List
+                // 🔸 Data List
                 Expanded(
                   child: filteredData.isEmpty
                       ? const Center(
@@ -152,27 +156,42 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    // 🔹 Header: Nama Lansia + Status
                                     Row(
                                       children: [
                                         CircleAvatar(
-                                          backgroundColor: lansia.status == 'Stabil'
-                                              ? Colors.green
-                                              : Colors.orange,
+                                          backgroundColor:
+                                              lansia.normalizedStatus == 'Stabil'
+                                                  ? Colors.green
+                                                  : Colors.orange,
                                           child: const Icon(Icons.favorite,
                                               color: Colors.white),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
-                                          child: Text(
-                                            'Tanggal: ${lansia.tanggal.day}/${lansia.tanggal.month}/${lansia.tanggal.year}',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                lansia.namaLansia ?? 'Tidak diketahui',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(
+                                                'Tanggal: ${lansia.tanggal.day}/${lansia.tanggal.month}/${lansia.tanggal.year}',
+                                                style: const TextStyle(
+                                                    color: Colors.black54),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                         Chip(
-                                          label: Text(lansia.status),
+                                          label: Text(lansia.normalizedStatus),
                                           backgroundColor:
-                                              lansia.status == 'Stabil'
+                                              lansia.normalizedStatus == 'Stabil'
                                                   ? Colors.green
                                                   : Colors.orange,
                                           labelStyle: const TextStyle(
@@ -180,12 +199,16 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
                                         ),
                                       ],
                                     ),
+
                                     const SizedBox(height: 12),
-                                    Text('Tekanan Darah: ${lansia.tekananDarah}'),
-                                    Text('Nadi: ${lansia.nadi} bpm'),
-                                    Text('Nafsu Makan: ${lansia.nafsuMakan}'),
-                                    Text('Status Obat: ${lansia.statusObat}'),
-                                    if (lansia.catatan != null && lansia.catatan!.isNotEmpty)
+
+                                    // 🔹 Detail kondisi
+                                    Text('Tekanan Darah: ${lansia.tekananDarah ?? "-"}'),
+                                    Text('Nadi: ${lansia.nadi ?? "-"} bpm'),
+                                    Text('Nafsu Makan: ${lansia.nafsuMakan ?? "-"}'),
+                                    Text('Status Obat: ${lansia.statusObat ?? "-"}'),
+                                    if (lansia.catatan != null &&
+                                        lansia.catatan!.isNotEmpty)
                                       Text('Catatan: ${lansia.catatan}'),
                                   ],
                                 ),
@@ -199,6 +222,7 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
     );
   }
 
+  // 🔹 Kartu ringkasan
   Widget _buildSummaryCard(String title, int value, Color color) {
     return Expanded(
       child: Card(
@@ -226,6 +250,7 @@ class _KondisiLansiaScreenState extends State<KondisiLansiaScreen> {
     );
   }
 
+  // 🔹 Pilih tanggal
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,

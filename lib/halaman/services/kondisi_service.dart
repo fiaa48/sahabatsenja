@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:sahabatsenja_app/models/kondisi_model.dart';
 
 class KondisiService {
-  final String baseUrl = 'http://10.0.161.194:8000/api'; // Sesuaikan IP
+  final String baseUrl = 'http://10.0.162.77:8000/api'; // Sesuaikan IP
 
   // 🔹 Tambah data kondisi lansia
   Future<bool> addKondisi(KondisiHarian kondisi) async {
@@ -101,7 +101,7 @@ class KondisiService {
   // 🔹 Ambil semua kondisi dari semua lansia (BARU)
   Future<List<KondisiHarian>> fetchAllKondisi() async {
     try {
-      final url = Uri.parse('$baseUrl/kondisi'); // pastikan endpoint index() ada di Laravel
+      final url = Uri.parse('$baseUrl/kondisi');
       final response = await http.get(url, headers: {'Accept': 'application/json'});
 
       if (response.statusCode == 200) {

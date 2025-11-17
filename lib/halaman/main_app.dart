@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../halaman/keluarga/home_screen.dart';
-import '../halaman/keluarga/activity_screen.dart';
+import 'keluarga/jadwal_keluarga_screen.dart';
 import '../halaman/keluarga/consultation_screen.dart';
 import '../halaman/keluarga/profile_screen.dart';
 
@@ -24,7 +24,7 @@ class _MainAppState extends State<MainApp> {
     // Inisialisasi screens di initState agar bisa menggunakan widget.namaKeluarga
     _screens = [
       HomeScreen(namaKeluarga: widget.namaKeluarga), // Berikan parameter
-      const ActivityScreen(),
+      const JadwalKeluargaScreen(),
       const ConsultationScreen(),
       const ProfileScreen(),
     ];

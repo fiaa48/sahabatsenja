@@ -1,7 +1,7 @@
 // screens/keluarga/main_screen.dart
 import 'package:flutter/material.dart';
 import 'package:sahabatsenja_app/halaman/keluarga/biodata_screen.dart';
-import 'package:sahabatsenja_app/halaman/keluarga/health_screen.dart';
+import 'package:sahabatsenja_app/halaman/keluarga/kesehatan_screen.dart';
 
 class KeluargaMainScreen extends StatefulWidget {
   const KeluargaMainScreen({super.key});
@@ -15,7 +15,7 @@ class _KeluargaMainScreenState extends State<KeluargaMainScreen> {
 
   // Daftar halaman untuk bottom navigation
   final List<Widget> _pages = [
-    const HealthScreen(),     // Halaman 0: Monitoring kesehatan
+    const KesehatanScreen(),     // Halaman 0: Monitoring kesehatan
     const BiodataLansiaScreen(), // Halaman 1: Tambah biodata lansia
   ];
 

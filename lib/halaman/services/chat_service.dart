@@ -1,74 +1,86 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:sahabatsenja_app/models/chat_model.dart';
 
 class ChatService {
-  final String baseUrl = "http://10.0.166.37:8000/api"; // sesuaikan
+  final String baseUrl = "http://192.168.1.18:8000/api";
 
-  /// ============================================================
-  /// GET CHAT BY datalansia_id  → untuk ambil isi percakapan
-  /// ============================================================
-  Future<List<ChatMessage>> getChat(int datalansiaId) async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/chat/$datalansiaId"),
-    );
+  /// ================================================
+  /// GET LIST CHAT UNTUK PERAWAT → MENAMPILKAN DAFTAR KELUARGA YG CHAT
+  /// ================================================
+  Future<List<dynamic>> getListChatPerawat(int perawatId) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/chat/list/perawat/$perawatId"),
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final list = data["data"] as List;
-
-      return list.map((e) => ChatMessage.fromJson(e)).toList();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data["data"];
+      }
+      return [];
+    } catch (e) {
+      print("Error getListChatPerawat: $e");
+      return [];
     }
-    return [];
   }
 
-  /// ============================================================
-  /// SEND CHAT → keluarga / perawat kirim pesan
-  /// ============================================================
-  Future<bool> sendChat({
+  /// ================================================
+  /// GET PESAN CHAT BERDASARKAN datalansia_id
+  /// ================================================
+  Future<List<dynamic>> getMessages(int datalansiaId) async {
+    try {
+      final response =
+          await http.get(Uri.parse("$baseUrl/chat/$datalansiaId"));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data["data"];
+      }
+      return [];
+    } catch (e) {
+      print("Error getMessages: $e");
+      return [];
+    }
+  }
+
+  /// ================================================
+  /// KIRIM PESAN CHAT
+  /// ================================================
+  Future<bool> sendMessage({
     required int datalansiaId,
-    required String sender, // "keluarga" / "perawat"
+    required String sender,
     required String pesan,
   }) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/chat/send"),
-      body: {
-        'datalansia_id': datalansiaId.toString(),
-        'sender': sender,
-        'pesan': pesan,
-      },
-    );
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/chat/send"),
+        body: {
+          "datalansia_id": datalansiaId.toString(),
+          "sender": sender, // Perawat / Keluarga
+          "pesan": pesan,
+        },
+      );
 
-    return response.statusCode == 200;
-  }
-
-  /// ============================================================
-  /// MARK AS READ → tandai pesan sudah dibaca
-  /// ============================================================
-  Future<bool> markRead(int datalansiaId) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/chat/read/$datalansiaId"),
-    );
-    return response.statusCode == 200;
-  }
-
-  /// ============================================================
-  /// LIST CHAT PERAWAT → menampilkan daftar keluarga yg bisa di-chat
-  /// perawat hanya lihat lansia yang dia tangani
-  /// ============================================================
-  Future<List<dynamic>> getListChatPerawat(int perawatId) async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/chat/list-perawat/$perawatId"),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data["data"] as List;
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Error sendMessage: $e");
+      return false;
     }
-    return [];
   }
 
-  getMessages(int datalansiaId) {}
+  /// ================================================
+  /// UPDATE STATUS PESAN → DIBACA
+  /// ================================================
+  Future<bool> markRead(int datalansiaId) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/chat/read/$datalansiaId"),
+      );
 
-  sendMessage({required int datalansiaId, required String sender, required String pesan}) {}
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Error markRead: $e");
+      return false;
+    }
+  }
 }

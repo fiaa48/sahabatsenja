@@ -31,13 +31,13 @@ class JadwalAktivitas {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
+        if (id != null) 'id': id,
         'waktu': waktu,
         'judul': judul,
         'deskripsi': deskripsi,
         'lokasi': lokasi,
         'peserta': peserta,
-        'completed': completed ? 1 : 0,
+        'completed': completed,
         'tanggal': tanggal.toIso8601String(),
       };
 }

@@ -36,10 +36,13 @@ class _JadwalObatScreenState extends State<JadwalObatScreen> {
     setState(() => isLoading = false);
   }
 
-  Future tambahObat() async {
+  Future<void> tambahObat() async {
     if (namaObatC.text.isEmpty || dosisC.text.isEmpty || waktuSelected == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Semua data harus diisi")),
+        const SnackBar(
+          content: Text("Semua data harus diisi"),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -55,19 +58,78 @@ class _JadwalObatScreenState extends State<JadwalObatScreen> {
       Navigator.pop(context);
       namaObatC.clear();
       dosisC.clear();
-      waktuSelected = null;
+      setState(() => waktuSelected = null);
       fetchData();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Jadwal obat berhasil ditambahkan"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Gagal menambah jadwal obat"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  Future updateStatus(int id, bool value) async {
-    await service.updateStatus(id, value);
-    fetchData();
+  Future<void> updateStatus(int id, bool value) async {
+    bool success = await service.updateStatus(id, value);
+    if (success) {
+      fetchData();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Gagal update status"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  Future deleteObat(int id) async {
-    await service.deleteJadwalObat(id);
-    fetchData();
+  Future<void> deleteObat(int id) async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Hapus Jadwal Obat"),
+        content: const Text("Apakah Anda yakin ingin menghapus jadwal obat ini?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Batal"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Hapus", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      bool success = await service.deleteJadwalObat(id);
+      if (success) {
+        fetchData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Jadwal obat berhasil dihapus"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Gagal menghapus jadwal obat"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -79,13 +141,14 @@ class _JadwalObatScreenState extends State<JadwalObatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Jadwal Obat"),
-        backgroundColor: Colors.teal,
+        title: const Text("Jadwal Obat"),
+        backgroundColor: const Color(0xFF9C6223),
+        foregroundColor: Colors.white,
       ),
 
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.teal,
-        child: Icon(Icons.add),
+        backgroundColor: const Color(0xFF9C6223),
+        child: const Icon(Icons.add, color: Colors.white),
         onPressed: openAddDialog,
       ),
 
@@ -93,10 +156,10 @@ class _JadwalObatScreenState extends State<JadwalObatScreen> {
         children: [
           // 🔽 WIDGET FILTER
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: DropdownButtonFormField(
               value: filterWaktu,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: "Filter Waktu",
                 border: OutlineInputBorder(),
               ),
@@ -115,18 +178,23 @@ class _JadwalObatScreenState extends State<JadwalObatScreen> {
           // 🔹 ISI LIST DATA
           Expanded(
             child: isLoading
-                ? Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : jadwalFiltered.isEmpty
-                    ? Center(child: Text("Belum ada jadwal obat"))
+                    ? const Center(
+                        child: Text(
+                          "Belum ada jadwal obat",
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                      )
                     : ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: jadwalFiltered.length,
                         itemBuilder: (context, index) {
                           final item = jadwalFiltered[index];
 
                           return Card(
                             elevation: 2,
-                            margin: EdgeInsets.only(bottom: 12),
+                            margin: const EdgeInsets.only(bottom: 12),
                             child: ListTile(
                               leading: Checkbox(
                                 value: item.completed,
@@ -140,12 +208,12 @@ class _JadwalObatScreenState extends State<JadwalObatScreen> {
                                   decoration: item.completed
                                       ? TextDecoration.lineThrough
                                       : null,
+                                  color: item.completed ? Colors.grey : Colors.black,
                                 ),
                               ),
-                              subtitle:
-                                  Text("${item.dosis} • ${item.waktu}"),
+                              subtitle: Text("${item.dosis} • ${item.waktu}"),
                               trailing: IconButton(
-                                icon: Icon(Icons.delete, color: Colors.red),
+                                icon: const Icon(Icons.delete, color: Colors.red),
                                 onPressed: () => deleteObat(item.id),
                               ),
                             ),
@@ -163,56 +231,64 @@ class _JadwalObatScreenState extends State<JadwalObatScreen> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text("Tambah Jadwal Obat"),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: namaObatC,
-                  decoration: InputDecoration(
-                    labelText: "Nama Obat",
-                    border: OutlineInputBorder(),
-                  ),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Tambah Jadwal Obat"),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: namaObatC,
+                      decoration: const InputDecoration(
+                        labelText: "Nama Obat",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: dosisC,
+                      decoration: const InputDecoration(
+                        labelText: "Dosis",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField(
+                      decoration: const InputDecoration(
+                        labelText: "Waktu",
+                        border: OutlineInputBorder(),
+                      ),
+                      value: waktuSelected,
+                      items: ["Pagi", "Siang", "Sore", "Malam"]
+                          .map((w) => DropdownMenuItem(
+                                child: Text(w),
+                                value: w,
+                              ))
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() => waktuSelected = val.toString());
+                      },
+                    ),
+                  ],
                 ),
-                SizedBox(height: 12),
-                TextField(
-                  controller: dosisC,
-                  decoration: InputDecoration(
-                    labelText: "Dosis",
-                    border: OutlineInputBorder(),
-                  ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text("Batal"),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                SizedBox(height: 12),
-                DropdownButtonFormField(
-                  decoration: InputDecoration(
-                    labelText: "Waktu",
-                    border: OutlineInputBorder(),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF9C6223),
                   ),
-                  value: waktuSelected,
-                  items: ["Pagi", "Siang", "Sore", "Malam"]
-                      .map((w) => DropdownMenuItem(
-                            child: Text(w),
-                            value: w,
-                          ))
-                      .toList(),
-                  onChanged: (val) {
-                    setState(() => waktuSelected = val.toString());
-                  },
-                ),
+                  onPressed: tambahObat,
+                  child: const Text("Simpan", style: TextStyle(color: Colors.white)),
+                )
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: Text("Batal"),
-              onPressed: () => Navigator.pop(context),
-            ),
-            ElevatedButton(
-              onPressed: tambahObat,
-              child: Text("Simpan"),
-            )
-          ],
+            );
+          },
         );
       },
     );

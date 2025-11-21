@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/chat_service.dart'; // sesuaikan path jika perlu
+import '../services/chat_service.dart';
 
 class ChatKeluargaScreen extends StatefulWidget {
   final int datalansiaId;
@@ -22,7 +22,7 @@ class _ChatKeluargaScreenState extends State<ChatKeluargaScreen> {
   final ScrollController _scrollController = ScrollController();
   final ChatService service = ChatService();
 
-  List chats = []; // List of messages from API
+  List chats = [];
 
   @override
   void initState() {
@@ -31,19 +31,16 @@ class _ChatKeluargaScreenState extends State<ChatKeluargaScreen> {
   }
 
   Future<void> loadChat() async {
-    try {
-      final result = await service.getMessages(widget.datalansiaId);
-      chats = result; // asumsi result adalah List dari JSON API
-    } catch (e) {
-      chats = [];
-      // optional: tampilkan error
-    }
+    final data = await service.getMessages(widget.datalansiaId);
+    chats = data;
+
     setState(() {});
 
-    // Auto scroll ke bawah
     Future.delayed(const Duration(milliseconds: 300), () {
-      if (_scrollController.hasClients && _scrollController.position.maxScrollExtent > 0) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(
+          _scrollController.position.maxScrollExtent,
+        );
       }
     });
   }
@@ -52,20 +49,18 @@ class _ChatKeluargaScreenState extends State<ChatKeluargaScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // Kirim ke API
     final ok = await service.sendMessage(
       datalansiaId: widget.datalansiaId,
-      sender: "keluarga",
+      sender: "Keluarga", // perbaikan huruf besar
       pesan: text,
     );
 
     if (ok) {
       _controller.clear();
-      await loadChat();
+      loadChat();
     } else {
-      // optional: notifikasi gagal
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal mengirim pesan')),
+        const SnackBar(content: Text("Gagal mengirim pesan")),
       );
     }
   }
@@ -81,28 +76,30 @@ class _ChatKeluargaScreenState extends State<ChatKeluargaScreen> {
         children: [
           Expanded(
             child: chats.isEmpty
-                ? const Center(child: Text('Belum ada pesan'))
+                ? const Center(child: Text("Belum ada pesan"))
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(12),
                     itemCount: chats.length,
                     itemBuilder: (context, index) {
                       final msg = chats[index];
-                      final bool isMe = (msg["sender"]?.toString().toLowerCase() ?? "") == "keluarga";
+                      final bool isMe = msg["sender"] == "Keluarga";
 
                       return Align(
-                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                        alignment:
+                            isMe ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          margin: const EdgeInsets.symmetric(vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          margin: const EdgeInsets.symmetric(vertical: 4),
                           decoration: BoxDecoration(
-                            color: isMe ? Colors.teal[300] : Colors.grey[300],
+                            color:
+                                isMe ? Colors.teal[300] : Colors.grey.shade300,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            msg["pesan"]?.toString() ?? '',
+                            msg["pesan"] ?? "",
                             style: TextStyle(
-                              fontSize: 16,
                               color: isMe ? Colors.white : Colors.black87,
                             ),
                           ),
@@ -112,9 +109,9 @@ class _ChatKeluargaScreenState extends State<ChatKeluargaScreen> {
                   ),
           ),
 
-          // Input
+          /// Input text
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.all(10),
             color: Colors.white,
             child: Row(
               children: [
@@ -124,14 +121,12 @@ class _ChatKeluargaScreenState extends State<ChatKeluargaScreen> {
                     decoration: InputDecoration(
                       hintText: "Ketik pesan...",
                       filled: true,
-                      fillColor: Colors.grey[200],
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+                      fillColor: Colors.grey.shade200,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25),
                         borderSide: BorderSide.none,
                       ),
                     ),
-                    textInputAction: TextInputAction.send,
                     onSubmitted: (_) => sendMessage(),
                   ),
                 ),
